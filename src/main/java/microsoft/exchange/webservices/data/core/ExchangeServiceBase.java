@@ -35,6 +35,7 @@ import microsoft.exchange.webservices.data.exception.ServiceLocalException;
 import microsoft.exchange.webservices.data.exception.ServiceValidationException;
 import microsoft.exchange.webservices.data.misc.EwsTraceListener;
 import microsoft.exchange.webservices.data.misc.ITraceListener;
+
 import org.apache.http.client.AuthenticationStrategy;
 import org.apache.http.client.CookieStore;
 import org.apache.http.client.protocol.HttpClientContext;
@@ -47,9 +48,7 @@ import org.apache.http.impl.client.BasicCookieStore;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.impl.conn.BasicHttpClientConnectionManager;
-
-import javax.xml.stream.XMLStreamException;
-import javax.xml.stream.XMLStreamWriter;
+import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 
 import java.io.ByteArrayOutputStream;
 import java.io.Closeable;
@@ -68,6 +67,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.TimeZone;
+
+import javax.xml.stream.XMLStreamException;
+import javax.xml.stream.XMLStreamWriter;
 
 /**
  * Represents an abstract binding to an Exchange Service.
@@ -149,7 +151,9 @@ public abstract class ExchangeServiceBase implements Closeable {
 
   protected HttpClientContext httpContext;
 
-  protected HttpClientWebRequest request = null;
+protected CloseableHttpClient	httpPoolingClient;
+
+//  protected HttpClientWebRequest request = null;
 
   // protected static HttpStatusCode AccountIsLocked = (HttpStatusCode)456;
 
@@ -191,7 +195,7 @@ public abstract class ExchangeServiceBase implements Closeable {
 
   private void initializeHttpClient() {
     Registry<ConnectionSocketFactory> registry = createConnectionSocketFactoryRegistry();
-    HttpClientConnectionManager httpConnectionManager = new BasicHttpClientConnectionManager(registry);
+    HttpClientConnectionManager httpConnectionManager = new  BasicHttpClientConnectionManager(registry);
     AuthenticationStrategy authStrategy = new CookieProcessingTargetAuthenticationStrategy();
 
     httpClient = HttpClients.custom()
@@ -199,6 +203,17 @@ public abstract class ExchangeServiceBase implements Closeable {
       .setTargetAuthenticationStrategy(authStrategy)
       .build();
   }
+  
+  private void initializeHttpPoolingClient() {
+	    Registry<ConnectionSocketFactory> registry = createConnectionSocketFactoryRegistry();
+	    HttpClientConnectionManager httpConnectionManager = new  PoolingHttpClientConnectionManager(registry);
+	    AuthenticationStrategy authStrategy = new CookieProcessingTargetAuthenticationStrategy();
+
+	    httpPoolingClient = HttpClients.custom()
+	      .setConnectionManager(httpConnectionManager)
+	      .setTargetAuthenticationStrategy(authStrategy)
+	      .build();
+	  }
 
   /**
    * Create registry with configured {@see ConnectionSocketFactory} instances.
@@ -233,6 +248,8 @@ public abstract class ExchangeServiceBase implements Closeable {
   public void close() {
     try {
       httpClient.close();
+      if (httpPoolingClient != null)
+      	httpPoolingClient.close();
     } catch (IOException e) {
       // Ignore exception while closing the HttpClient.
     }
@@ -281,8 +298,34 @@ public abstract class ExchangeServiceBase implements Closeable {
       throw new ServiceLocalException(strErr);
     }
 
-    request = new HttpClientWebRequest(httpClient, httpContext);
-    try {
+    HttpClientWebRequest request = new HttpClientWebRequest(httpClient, httpContext);
+    prepareHttpWebRequestForUrl(url, acceptGzipEncoding, allowAutoRedirect, request);
+
+    return request;
+  }
+  
+  protected HttpWebRequest prepareHttpPoolingWebRequestForUrl(URI url, boolean acceptGzipEncoding,
+	      boolean allowAutoRedirect) throws ServiceLocalException, URISyntaxException {
+	    // Verify that the protocol is something that we can handle
+	    String scheme = url.getScheme();
+	    if (!scheme.equalsIgnoreCase(EWSConstants.HTTP_SCHEME)
+	      && !scheme.equalsIgnoreCase(EWSConstants.HTTPS_SCHEME)) {
+	      String strErr = String.format("Protocol %s isn't supported for service request.", scheme);
+	      throw new ServiceLocalException(strErr);
+	    }
+
+	    if (httpPoolingClient == null)
+	   	 initializeHttpPoolingClient();
+	    HttpClientWebRequest request = new HttpClientWebRequest(httpPoolingClient, httpContext);
+	    prepareHttpWebRequestForUrl(url, acceptGzipEncoding, allowAutoRedirect, request);
+
+	    return request;
+	  }
+
+private void prepareHttpWebRequestForUrl(URI url, boolean acceptGzipEncoding, boolean allowAutoRedirect, HttpClientWebRequest request)
+		throws ServiceLocalException, URISyntaxException
+{
+	try {
       request.setUrl(url.toURL());
     } catch (MalformedURLException e) {
       String strErr = String.format("Incorrect format : %s", url);
@@ -303,9 +346,7 @@ public abstract class ExchangeServiceBase implements Closeable {
     request.prepareConnection();
 
     httpResponseHeaders.clear();
-
-    return request;
-  }
+}
 
   protected void prepareCredentials(HttpWebRequest request) throws ServiceLocalException, URISyntaxException {
     request.setUseDefaultCredentials(useDefaultCredentials);

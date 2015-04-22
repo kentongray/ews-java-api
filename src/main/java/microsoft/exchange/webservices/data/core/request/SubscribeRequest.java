@@ -37,10 +37,10 @@ import microsoft.exchange.webservices.data.exception.ServiceXmlSerializationExce
 import microsoft.exchange.webservices.data.misc.FolderIdWrapperList;
 import microsoft.exchange.webservices.data.notification.SubscriptionBase;
 
-import javax.xml.stream.XMLStreamException;
-
 import java.util.ArrayList;
 import java.util.List;
+
+import javax.xml.stream.XMLStreamException;
 
 /**
  * The Class SubscribeRequest.
@@ -256,4 +256,8 @@ abstract class SubscribeRequest<TSubscription extends SubscriptionBase> extends
     this.watermark = watermark;
   }
 
+  @Override
+  protected HttpWebRequest buildEwsHttpWebRequest() throws Exception {
+    return super.buildEwsHttpPoolingWebRequest();
+  }
 }
