@@ -3382,6 +3382,11 @@ public class XmlElementNames {
    */
   public static final String PartnerTokenReference = "PartnerTokenReference";
 
+  /**
+   * The Constant PartnerTokenReference.
+   */
+  public static final String GroupingInformation = "GroupingInformation";
+
   // InboxRule
   /**
    * The Constant MinorBuildNumber.
