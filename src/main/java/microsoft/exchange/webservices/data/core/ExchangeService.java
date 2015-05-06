@@ -178,6 +178,7 @@ import microsoft.exchange.webservices.data.search.filter.SearchFilter;
 import microsoft.exchange.webservices.data.sync.ChangeCollection;
 import microsoft.exchange.webservices.data.sync.FolderChange;
 import microsoft.exchange.webservices.data.sync.ItemChange;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.w3c.dom.Document;
@@ -3807,6 +3808,17 @@ public class ExchangeService extends ExchangeServiceBase implements IAutodiscove
     return this.prepareHttpWebRequestForUrl(url, this
         .getAcceptGzipEncoding(), true);
   }
+  
+  public HttpWebRequest prepareHttpPoolingWebRequest()
+	      throws ServiceLocalException, URISyntaxException {
+	    try {
+	      this.url = this.adjustServiceUriFromCredentials(this.getUrl());
+	    } catch (Exception e) {
+	      LOG.error(e);
+	    }
+	    return this.prepareHttpPoolingWebRequestForUrl(url, this
+	        .getAcceptGzipEncoding(), true);
+	  }
 
   /**
    * Processes an HTTP error response.

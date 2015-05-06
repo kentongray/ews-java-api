@@ -149,5 +149,8 @@ public class GetStreamingEventsRequest extends HangingServiceRequestBase<GetStre
     GetStreamingEventsRequest.heartbeatFrequency = heartbeatFrequency;
   }
 
-
+  @Override
+  protected HttpWebRequest buildEwsHttpWebRequest() throws Exception {
+    return super.buildEwsHttpPoolingWebRequest();
+  }
 }

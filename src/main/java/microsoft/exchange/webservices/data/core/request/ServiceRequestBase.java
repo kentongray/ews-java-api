@@ -47,11 +47,9 @@ import microsoft.exchange.webservices.data.exception.ServiceXmlSerializationExce
 import microsoft.exchange.webservices.data.exception.XmlException;
 import microsoft.exchange.webservices.data.misc.SoapFaultDetails;
 import microsoft.exchange.webservices.data.security.XmlNodeType;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
-import javax.xml.stream.XMLStreamException;
-import javax.xml.ws.http.HTTPException;
 
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
@@ -59,8 +57,12 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.net.URISyntaxException;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.InflaterInputStream;
+
+import javax.xml.stream.XMLStreamException;
+import javax.xml.ws.http.HTTPException;
 
 /**
  * Represents an abstract service request.
@@ -751,8 +753,19 @@ public abstract class ServiceRequestBase<T> {
    * @return An HttpWebRequest instance
    */
   protected HttpWebRequest buildEwsHttpWebRequest() throws Exception {
-    try {
-      HttpWebRequest request = service.prepareHttpWebRequest();
+     HttpWebRequest request = service.prepareHttpWebRequest();
+    return buildEwsHttpWebRequest(request);
+  }
+  
+  protected HttpWebRequest buildEwsHttpPoolingWebRequest() throws Exception {
+     HttpWebRequest request = service.prepareHttpPoolingWebRequest();
+    return buildEwsHttpWebRequest(request);
+  }
+
+private HttpWebRequest buildEwsHttpWebRequest(HttpWebRequest request) throws ServiceLocalException, URISyntaxException, EWSHttpException,
+		XMLStreamException, Exception, ServiceRequestException
+{
+	try {
 
       service.traceHttpRequestHeaders(TraceFlags.EwsRequestHttpHeaders, request);
 
@@ -776,7 +789,7 @@ public abstract class ServiceRequestBase<T> {
       // Wrap exception.
       throw new ServiceRequestException(String.format("The request failed. %s", e.getMessage()), e);
     }
-  }
+}
 
   /**
    * Gets the IEwsHttpWebRequest object from the specifiedHttpWebRequest
